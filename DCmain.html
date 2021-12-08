@@ -1,0 +1,85 @@
+<head>
+	<!-- Load plotly.js into the DOM -->
+	<script src='https://cdn.plot.ly/plotly-2.6.3.min.js'></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js'></script>
+</head>
+
+<form>
+    <label for="linkIn">Link:</label><br>
+    <input type="text" id="linkIn" name="linkIn"><br>
+</form>
+
+<body>
+	<div id='myDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+    <script>
+        var linkObj = document.getElementById("linkIn");
+        var linkCSV = linkObj.value;
+
+        d3.csv(linkCSV, function(err, rows){
+
+        function unpack(rows, key) {
+        return rows.map(function(row) {
+            return row[key];
+        });
+        }
+
+        var data = [{
+        type: 'parcoords',
+        line: {
+            showscale: true,
+            reversescale: true,
+            colorscale: 'Jet',
+            cmin: -4000,
+            cmax: -100,
+            color: unpack(rows, 'colorVal')
+        },
+
+        dimensions: [{
+            constraintrange: [0,200],
+            range: [0,3],
+            label: 'Cultivars',
+            values: unpack(rows, 'Cultivars')
+        }, {
+            range: [11,14.75],
+            label: 'Alcohol',
+            values: unpack(rows, 'Alcohol')
+        }, {
+            range: [0.5,6],
+            label: 'Malic acid',
+            values: unpack(rows, 'Malic acid')
+        }, {
+            range: [1.25,3.25],
+            label: 'Ash',
+            values: unpack(rows, 'Ash')
+        }, {
+            range: [10.5, 30],
+            label: 'Alcalinity of ash',
+            values: unpack(rows, 'Alcalinity of ash')
+        }, {
+            range: [70, 162],
+            label: 'Magnesium',
+            values: unpack(rows, 'Magnesium')
+        }, {
+            range: [0.9, 4.0],
+            label: 'Total Phenols',
+            values: unpack(rows, 'Total Phenols')
+        }, {
+            range: [0.3, 5.1],
+            label: 'Flavanoids',
+            values: unpack(rows, 'Flavanoids')
+        }, {
+            range: [0.1, 0.7],
+            label: 'Nonflavanois phenols',
+            values: unpack(rows, 'Nonflavanois phenols')
+        }, {
+            range: [0.4, 3.6],
+            label: 'Proanthocyanins',
+            values: unpack(rows, 'Proanthocyanins')
+        }]
+        }];
+
+        Plotly.newPlot('myDiv', data);
+
+        });
+    </script>
+</body>
