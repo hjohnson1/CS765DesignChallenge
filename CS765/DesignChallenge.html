@@ -1,0 +1,381 @@
+<!doctype html>
+<html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <link rel="stylesheet" type="text/css" href="../d3.parcoords.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    
+    <script src="lib/d3.js"></script>
+    <script src="lib/d3.svg.multibrush.js"></script>
+    <script src="lib/sylvester.js"></script>
+    <script src="lib/underscore.math.js"></script>
+    <script src="lib/d3.min.js"></script>
+    <script src="../d3.parcoords.js"></script>
+</head>
+
+<body>
+    <h1>Tiny Charts Visualizer</h1>
+    <h2>How to Use This HTML Page</h2>
+    <p>First upload a csv file of your choice. This site uses fully numerical data.</p>
+    <p>
+        The data will be cut down if it is too large. (Max 10 columns, Max 1000 rows) 
+        <ul>
+            <li>If you have columns you definitely want, remove unneeded from csv prior to upload. This tool will only keep the first 10.</li>
+            <li>If there are greater than 1000 rows, the 1000 rows displayed are randomly chosen from the file.</li>
+        </ul>
+    </p>
+    <p>Once you upload your csv you will see 4 charts. 1 is at 100%, 2 is at 75%, 3 is at 50%, and 4 is at 40%.</p>
+<div>
+    <input type="file" id="uploader">
+    <p>Which column focus on: </p><input type="text" id="column">
+</div>
+
+
+
+<script>
+    //getting things ready
+    var data;
+    var colMain;
+    var max;
+    var min;
+    var ranNums;
+
+    var uploader = document.getElementById("uploader");  
+    var reader = new FileReader();
+
+    reader.onload = function(e) {
+        var contents = e.target.result;
+        data = d3.csv.parse(contents);
+
+        //remove rows over 1000 randomly
+        if(data.length > 1000){
+            var tempArr = new Array();
+            for(let j = 0; j < data.length; j++)
+                {
+                    tempArr[j] = j;
+                }
+            ranNums = shuffle(tempArr);
+            console.log(ranNums);
+            ranNums = ranNums.slice(0,1000);
+            console.log(ranNums);
+            data = d3.csv.parse(contents, row);
+        }
+
+        var numberOfRows = data.length; // we can easily get the number of rows (excluding the title row)
+        columns = Object.keys( data[0] );  // then taking the first row object and getting an array of the keys
+        numberOfCOlumns = columns.length;
+
+        if(numberOfCOlumns > 10){
+            var columns_Remove = col(numberOfCOlumns,Object.keys( data[0] ));
+            data=filterCSV(columns_Remove, data);
+        }
+
+        colMain = columns[0];
+        data.forEach(function(d) {
+                d[colMain] = +d[colMain];
+        });
+        max = parseFloat(d3.max(data, function(d) { return d[colMain]; }));
+        min = parseFloat(d3.min(data, function(d) { return d[colMain]; }));
+
+        parallelCoordinates(400,800);
+        parallelCoordinates75(400*0.75,800*0.75);
+        parallelCoordinates50(400*0.5,800*0.5);
+        parallelCoordinates40(400*0.4,800*0.4);
+
+        // remove button, since re-initializing doesn't work for now
+        uploader.parentNode.removeChild(uploader);
+    };
+
+    function filterCSV(remove,data){
+        let objArr = new Array();
+        for(let j = 0; j < data.length; j++){
+            objArr[j] = JSON.parse(JSON.stringify(data[j]));
+            for (let i = 0; i < remove.length; i++)
+            {
+                delete objArr[j][remove[i]];
+            }
+        }
+        return objArr;
+    }
+    function col(colLen,data){
+        var temp=new Array();
+        for (let i = 10; i < colLen; i++)
+        {
+            temp[i]=data[i];
+        }
+        return temp;
+    }
+    function row(d, i) {
+        if (ranNums.includes(i)) return d;
+    }
+    function shuffle(array) {
+        var i = array.length,
+        j = 0,
+        temp;
+
+        while (i--) {
+        j = Math.floor(Math.random() * (i+1));
+
+        // swap randomly chosen element with current element
+        temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+
+        }
+        return array;
+    }
+
+    uploader.addEventListener("change", handleFiles, false);  
+
+    function handleFiles() {
+        var file = this.files[0];
+        reader.readAsText(file);
+    };
+
+    // text input for color and dimension
+    d3.select("#column").on("change", function() {
+        colMain = this.value;
+        data.forEach(function(d) {
+            d[colMain] = +d[colMain];
+        });
+        max = parseFloat(d3.max(data, function(d) { return d[colMain]; }));
+        min = parseFloat(d3.min(data, function(d) { return d[colMain]; }));
+
+        //40%
+        parcoords_40.bundleDimension(colMain).render();
+        color_range4.domain([min, (max+min)/2, max]);
+        parcoords_40.color(function(d) { return color_range4(d[colMain]); }).render();
+
+        //50%
+        parcoords_50.bundleDimension(colMain).render();
+        color_range3.domain([min, (max+min)/2, max]);
+        parcoords_50.color(function(d) { return color_range3(d[colMain]); }).render();
+
+        //75%
+        parcoords_75.bundleDimension(colMain).render();
+        color_range2.domain([min, (max+min)/2, max]);
+        parcoords_75.color(function(d) { return color_range2(d[colMain]); }).render();
+
+        //100%
+        color_range1.domain([min, (max+min)/2, max]);
+        parcoords_full.color(function(d) {return color_range1(d[colMain]); }).render();
+    });
+</script>
+
+
+
+
+<h2>Full Size (height = 400px, width = 800px): </h2>
+<p>
+    This chart shows the most raw information. You can reorder the dimensions by clicking, holding, and dragging one. You can also 
+    rotate the labels if they are overlapping by hovering over one and scrolling. 
+    The color is automatically based off of the first dimension, but the user can change this.
+</p>
+<p>
+    If you choose to change the column focus (above) the color will be changed for the domain of that dimension.
+</p>
+<div id="example_full" class="parcoords"></div>
+
+<style>
+    body, html {
+      margin: 10px;
+      height: 100%;
+      width: 100%;
+    }
+    body{
+        display:block;
+    }
+</style>
+<script id="full size">
+
+var color_range1 = d3.scale.linear()
+    .range(["mediumseagreen", "goldenrod", "indigo"])
+    .interpolate(d3.interpolateLab);
+
+var parcoords_full = d3.parcoords()("#example_full")
+  .alpha(0.4)
+  .mode("queue") // progressive rendering
+  .margin({
+    top: 36,
+    left: 0,
+    right: 0,
+    bottom: 16
+  });
+  
+// create chart from loaded data
+function parallelCoordinates(height, width) {
+    color_range1
+        .domain([min, (max+min)/2, max])
+    parcoords_full
+        .height(height)
+        .width(width)
+        .data(data)
+        .color(function(d) { return color_range1(d[colMain]); })
+        .hideAxis(["id"])
+        .render()
+        .reorderable()
+        .interactive()
+        .rotateLabels(90)
+        .axisDots(size = 0.5);
+};
+
+</script>
+
+
+<h2>75% Size: </h2>
+<p>
+    This chart has all the features as above however you can now use brusing to begin focusing on areas of 
+    interest to make those area stand out. This chart has been changed to a bundling strength of 0.4 and smoothness of 0.15.
+    The bundling and color are automatically based off of the first dimension, but the user can change this.
+</p>
+<p>
+    If you choose to change the column focus (above) the color will be changed for the domain of that dimension
+    and the bundling dimension will be updated to chosen dimension.
+</p>
+<div id="example_75" class="parcoords"></div>
+<script id="75size">
+
+
+var color_range2 = d3.scale.linear()
+    .range(["mediumseagreen", "goldenrod", "indigo"])
+    .interpolate(d3.interpolateLab);
+
+var parcoords_75 = d3.parcoords()("#example_75")
+  .alpha(0.4)
+  .mode("queue") // progressive rendering
+  .margin({
+    top: 36,
+    left: 0,
+    right: 0,
+    bottom: 16
+  });
+
+
+// create chart from loaded data
+function parallelCoordinates75(height, width) {
+    color_range2
+        .domain([min, (max+min)/2, max])
+    parcoords_75
+        .height(height)
+        .width(width)
+        .data(data)
+        .bundlingStrength(0.4) // set bundling strength
+        .smoothness(0.15)
+        .bundleDimension(colMain)
+        .hideAxis(["id"])
+        .reorderable()
+        .rotateLabels(90)
+        .color(function(d) { return color_range2(d[colMain]); })
+        .render();
+};
+
+</script>
+
+
+<h2>50% Size: </h2>
+<p>
+    This chart has all the features as above. This chart has been changed to a bundling strength of 0.6 and smoothness of 0.2.
+    This brings out the trend at the smaller scale and "cleans up" the look of the chart. The bundling and color are automatically based off
+    of the first dimension, but the user can change this.
+</p>
+<p>
+    If you choose to change the column focus (above) the color will be changed for the domain of that dimension
+    and the bundling dimension will be updated to chosen dimension.
+</p>
+<div id="example_50" class="parcoords"></div>
+<script id="50size">
+
+var color_range3 = d3.scale.linear()
+    .range(["mediumseagreen", "goldenrod", "indigo"])
+    .interpolate(d3.interpolateLab);
+
+var parcoords_50 = d3.parcoords()("#example_50")
+    .alpha(0.4)
+    .mode("queue") // progressive rendering
+    .margin({
+        top: 36,
+        left: 0,
+        right: 0,
+        bottom: 16
+    });
+    
+// create chart from loaded data
+function parallelCoordinates50(height, width) {
+    color_range3 
+        .domain([min, (max+min)/2, max])
+    parcoords_50
+        .height(height)
+        .width(width)
+        .data(data)
+        .bundlingStrength(0.6) // set bundling strength
+        .smoothness(0.2)
+        .bundleDimension(colMain)
+        .hideAxis(["id"])
+        .brushMode("1D-axes")
+        .reorderable()
+        .interactive()
+        .rotateLabels(90)
+        .color(function(d) { return color_range3(d[colMain]); })
+        .render();
+};
+
+</script>
+
+<h2>40% Size: </h2>
+<p>
+    This chart has all the features as above. This chart has been changed to a bundling strength of 0.8 and smoothness of 0.2.
+    This brings out the trend at the smaller scale and "cleans up" the look of the chart. The bundling and color are automatically based off
+    of the first dimension, but the user can change this.
+</p>
+<p>
+    If you choose to change the column focus (above) the color will be changed for the domain of that dimension
+    and the bundling dimension will be updated to chosen dimension.
+</p>
+<div id="example_40" class="parcoords"></div>
+<script id="40size">
+
+var color_range4 = d3.scale.linear()
+    .range(["mediumseagreen", "goldenrod", "indigo"])
+    .interpolate(d3.interpolateLab);
+
+var parcoords_40 = d3.parcoords()("#example_40")
+    .alpha(0.4)
+    .mode("queue") // progressive rendering
+    .margin({
+        top: 36,
+        left: 0,
+        right: 0,
+        bottom: 16
+    });
+    
+// create chart from loaded data
+function parallelCoordinates40(height, width) {
+    color_range4 
+        .domain([min, (max+min)/2, max])
+    parcoords_40
+        .height(height)
+        .width(width)
+        .data(data)
+        .bundlingStrength(0.8) // set bundling strength
+        .smoothness(0.2)
+        .bundleDimension(colMain)
+        .hideAxis(["id"])
+        .brushMode("1D-axes")
+        .reorderable()
+        .interactive()
+        .rotateLabels(90)
+        .color(function(d) { return color_range4(d[colMain]); })
+        .render();
+};
+
+</script>
+
+<p>
+    This page was made using html, js, d3, and this d3 <a href =https://github.com/syntagmatic/parallel-coordinates#parallel-coordinates>library</a>.
+</p>
+<p>Hailey Johnson</p>
+<p>CS765: Data Visualization 2021</p>
+<div id="pager"></div>
+</body>
+</html>
